@@ -1,0 +1,22 @@
+# Go build outputs
+backend/drift-server
+backend/bin/
+
+# Go module cache
+vendor/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docker volumes
+pgdata/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

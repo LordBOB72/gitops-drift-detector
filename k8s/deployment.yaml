@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drift-detector-backend
+  namespace: gitops-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drift-detector-backend
+  template:
+    metadata:
+      labels:
+        app: drift-detector-backend
+    spec:
+      serviceAccountName: drift-detector
+      containers:
+        - name: backend
+          image: yourorg/drift-detector-backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: drift-detector-secrets
+                  key: database-url
+            - name: GIT_POLL_INTERVAL
+              value: "30s"
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drift-detector-backend
+  namespace: gitops-system
+spec:
+  selector:
+    app: drift-detector-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: drift-detector
+  namespace: gitops-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: drift-detector
+rules:
+  - apiGroups: ["", "apps", "extensions"]
+    resources: ["deployments", "configmaps", "services", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch", "patch", "apply"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: drift-detector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: drift-detector
+subjects:
+  - kind: ServiceAccount
+    name: drift-detector
+    namespace: gitops-system
